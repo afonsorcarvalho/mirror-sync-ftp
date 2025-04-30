@@ -1,0 +1,24 @@
+# Arquivos de configuração com senhas
+config.yml
+
+# Logs
+logs/
+*.log
+
+# Ambiente virtual Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos do sistema
+.DS_Store
+.env
+*.tmp
+*.temp
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo 

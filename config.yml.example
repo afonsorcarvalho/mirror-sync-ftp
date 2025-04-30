@@ -1,0 +1,23 @@
+# Configuração para espelhamento de diretórios via FTP
+# Cada host deve ter:
+# - name: Nome identificador do host
+# - host: Endereço do servidor FTP
+# - username: Usuário FTP
+# - password: Senha FTP
+# - remote_dir: Diretório remoto para espelhar
+# - local_dir: Diretório local onde será salvo
+# - recursive: Se deve baixar recursivamente (true/false)
+# - exclude: Lista de padrões para excluir (opcional)
+
+hosts:
+  - name: "exemplo1"
+    host: "ftp.exemplo.com"
+    username: "seu_usuario"
+    password: "sua_senha"
+    remote_dir: "/pasta/remota"
+    local_dir: "/home/user/mirrors/exemplo1"
+    recursive: true
+    exclude:
+      - "*.tmp"
+      - "*.log"
+      - "*.REC" 
