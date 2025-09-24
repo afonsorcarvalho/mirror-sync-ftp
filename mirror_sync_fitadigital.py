@@ -86,12 +86,12 @@ def mirror_directory(host_config):
     if verbose:
         wget_cmd.extend(['--debug', '--verbose'])
         logging.debug(f"Modo verbose ativado para {name}")
+    elif debug:
+        # Modo debug força pelo menos --verbose para ter saída
+        wget_cmd.append('--verbose')
+        logging.info(f"Modo debug ativado para {name} - saída completa será logada")
     else:
         wget_cmd.append('--no-verbose')
-    
-    # Adiciona modo debug se solicitado (independente do verbose)
-    if debug:
-        logging.info(f"Modo debug ativado para {name} - saída completa será logada")
 
     # Adiciona opções para exclusão de diretórios
     if exclude:
@@ -129,7 +129,11 @@ def mirror_directory(host_config):
             if debug:
                 # Modo debug sempre mostra saída completa
                 logging.info(f"[DEBUG] Saída do wget para {name}:")
-                logging.info(f"[DEBUG] {result.stdout}")
+                if result.stdout.strip():
+                    logging.info(f"[DEBUG] {result.stdout}")
+                else:
+                    logging.info(f"[DEBUG] (Saída vazia - wget executou silenciosamente)")
+                    logging.info(f"[DEBUG] Comando executado: {' '.join(wget_cmd).replace(password, '********')}")
             elif verbose:
                 logging.debug(f"Saída do wget: {result.stdout}")
         else:
@@ -139,8 +143,12 @@ def mirror_directory(host_config):
             if debug:
                 # Modo debug sempre mostra saída completa mesmo em caso de erro
                 logging.info(f"[DEBUG] Saída do wget (erro) para {name}:")
-                logging.info(f"[DEBUG] STDOUT: {result.stdout}")
+                if result.stdout.strip():
+                    logging.info(f"[DEBUG] STDOUT: {result.stdout}")
+                else:
+                    logging.info(f"[DEBUG] STDOUT: (vazio)")
                 logging.info(f"[DEBUG] STDERR: {result.stderr.replace(password, '********')}")
+                logging.info(f"[DEBUG] Comando executado: {' '.join(wget_cmd).replace(password, '********')}")
             elif verbose:
                 logging.debug(f"Saída completa do wget: {result.stdout}")
 
