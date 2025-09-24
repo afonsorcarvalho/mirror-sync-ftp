@@ -151,17 +151,20 @@ def mirror_directory(host_config):
 
 def main():
     """Função principal que coordena o espelhamento de todos os hosts"""
-    logging.info("Iniciando processo de espelhamento via FTP")
+    # Primeiro configura o logging básico para capturar erros iniciais
+    setup_logging(False)  # Configuração básica inicial
     
     config = load_config()
     if not config:
         logging.error("Não foi possível carregar a configuração. Encerrando.")
         return
 
-    # Configura o logging baseado no modo verbose global
+    # Reconfigura o logging baseado no modo verbose/debug global
     global_verbose = config.get('verbose', False)
     global_debug = config.get('debug', False)
     setup_logging(global_verbose or global_debug)
+    
+    logging.info("Iniciando processo de espelhamento via FTP")
     
     if global_verbose:
         logging.debug("Modo verbose global ativado")
