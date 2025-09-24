@@ -87,8 +87,16 @@ def mirror_directory(host_config):
         wget_cmd.extend(['--debug', '--verbose'])
         logging.debug(f"Modo verbose ativado para {name}")
     elif debug:
-        # Modo debug força pelo menos --verbose para ter saída
-        wget_cmd.append('--verbose')
+        # Modo debug força verbosidade máxima
+        wget_cmd.extend([
+            '--debug', 
+            '--verbose', 
+            '--progress=bar', 
+            '--show-progress', 
+            '--report-speed=bits',
+            '--no-remove-listing',  # Mantém arquivos de listagem
+            '--server-response'      # Mostra cabeçalhos do servidor
+        ])
         logging.info(f"Modo debug ativado para {name} - saída completa será logada")
     else:
         wget_cmd.append('--no-verbose')
@@ -114,6 +122,22 @@ def mirror_directory(host_config):
         logging.info(f"Iniciando espelhamento FTP para {name}")
         logging.info(f"Conectando a: {safe_url}")  # Log seguro sem senha
         
+        # Teste de conectividade no modo debug
+        if debug:
+            logging.info(f"[DEBUG] Testando conectividade com {host}...")
+            import socket
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(10)
+                result_conn = sock.connect_ex((host, 21))
+                sock.close()
+                if result_conn == 0:
+                    logging.info(f"[DEBUG] ✓ Conectividade com {host}:21 OK")
+                else:
+                    logging.info(f"[DEBUG] ✗ Conectividade com {host}:21 FALHOU (código: {result_conn})")
+            except Exception as e:
+                logging.info(f"[DEBUG] ✗ Erro no teste de conectividade: {e}")
+        
         if verbose or debug:
             logging.debug(f"Comando wget completo: {' '.join(wget_cmd).replace(password, '********')}")
         
@@ -129,11 +153,21 @@ def mirror_directory(host_config):
             if debug:
                 # Modo debug sempre mostra saída completa
                 logging.info(f"[DEBUG] Saída do wget para {name}:")
+                
+                # Combina stdout e stderr para debug completo
+                combined_output = ""
                 if result.stdout.strip():
-                    logging.info(f"[DEBUG] {result.stdout}")
+                    combined_output += f"STDOUT:\n{result.stdout}\n"
+                if result.stderr.strip():
+                    combined_output += f"STDERR:\n{result.stderr.replace(password, '********')}\n"
+                
+                if combined_output.strip():
+                    logging.info(f"[DEBUG] {combined_output}")
                 else:
-                    logging.info(f"[DEBUG] (Saída vazia - wget executou silenciosamente)")
+                    logging.info(f"[DEBUG] (Saída completamente vazia - wget executou silenciosamente)")
                     logging.info(f"[DEBUG] Comando executado: {' '.join(wget_cmd).replace(password, '********')}")
+                    logging.info(f"[DEBUG] Possíveis causas: diretório vazio, sem permissão, ou conexão sem transferência")
+                    logging.info(f"[DEBUG] Código de retorno: {result.returncode}")
             elif verbose:
                 logging.debug(f"Saída do wget: {result.stdout}")
         else:
