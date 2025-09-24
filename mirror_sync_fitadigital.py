@@ -9,7 +9,6 @@ import yaml
 import subprocess
 import os
 import logging
-import fcntl
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -32,19 +31,6 @@ def setup_logging(verbose=False):
         ]
     )
 
-def obtain_lock():
-    """
-    Tenta obter um lock exclusivo para garantir que apenas uma instância do script esteja rodando.
-    Retorna o descritor do arquivo de lock ou None se não conseguir obter o lock.
-    """
-    lock_file = Path('/tmp/mirror_sync.lock')
-    try:
-        lock_fd = open(lock_file, 'w')
-        fcntl.lockf(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return lock_fd
-    except IOError:
-        logging.warning("Outra instância do script já está em execução. Encerrando.")
-        return None
 
 def load_config():
     """Carrega a configuração do arquivo config.yml"""
@@ -147,35 +133,24 @@ def mirror_directory(host_config):
 
 def main():
     """Função principal que coordena o espelhamento de todos os hosts"""
-    # Tenta obter o lock
-    lock_fd = obtain_lock()
-    if not lock_fd:
-        sys.exit(1)
-
-    try:
-        logging.info("Iniciando processo de espelhamento via FTP")
-        
-        config = load_config()
-        if not config:
-            logging.error("Não foi possível carregar a configuração. Encerrando.")
-            return
-
-        # Configura o logging baseado no modo verbose global
-        global_verbose = config.get('verbose', False)
-        setup_logging(global_verbose)
-        
-        if global_verbose:
-            logging.debug("Modo verbose global ativado")
-
-        for host in config.get('hosts', []):
-            mirror_directory(host)
-
-        logging.info("Processo de espelhamento concluído")
+    logging.info("Iniciando processo de espelhamento via FTP")
     
-    finally:
-        # Libera o lock ao finalizar
-        fcntl.lockf(lock_fd, fcntl.LOCK_UN)
-        lock_fd.close()
+    config = load_config()
+    if not config:
+        logging.error("Não foi possível carregar a configuração. Encerrando.")
+        return
+
+    # Configura o logging baseado no modo verbose global
+    global_verbose = config.get('verbose', False)
+    setup_logging(global_verbose)
+    
+    if global_verbose:
+        logging.debug("Modo verbose global ativado")
+
+    for host in config.get('hosts', []):
+        mirror_directory(host)
+
+    logging.info("Processo de espelhamento concluído")
 
 if __name__ == "__main__":
     main() 
