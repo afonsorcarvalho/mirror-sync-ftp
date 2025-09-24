@@ -98,6 +98,45 @@ O arquivo `logs/mirror_sync_YYYYMMDD.log` contém:
 - Logs detalhados do processo de sincronização
 - Erros e avisos
 - Informações de cada host configurado
+- **Saída completa do wget** (quando modo debug estiver ativado)
+
+### Modos de Debug
+
+O script suporta dois modos de debug independentes:
+
+#### Modo Verbose
+```yaml
+# config.yml
+verbose: true  # Global
+hosts:
+  - name: "servidor"
+    verbose: true  # Por host
+```
+- Ativa `--debug --verbose` no comando wget
+- Logs de saída em nível DEBUG
+- Útil para debug técnico detalhado
+
+#### Modo Debug
+```yaml
+# config.yml
+debug: true  # Global
+hosts:
+  - name: "servidor"
+    debug: true  # Por host
+```
+- **Sempre loga saída completa do wget em nível INFO**
+- Independente do verbose
+- Útil para monitoramento em produção
+- **Recomendado para ver a saída do comando wget**
+
+#### Exemplo Combinado
+```yaml
+# config.yml
+verbose: true
+debug: true
+```
+- Máxima verbosidade
+- Logs detalhados + saída completa sempre visível
 
 ### Verificar Status
 

@@ -1,0 +1,49 @@
+# Exemplo de configuração com modo debug
+# Este arquivo demonstra como usar os diferentes modos de operação
+
+# Configurações globais
+verbose: false  # Ativa logs detalhados do wget (--debug --verbose)
+debug: true     # Sempre loga saída completa do wget em nível INFO
+
+# Hosts para espelhamento
+hosts:
+  - name: "exemplo_servidor"
+    host: "ftp.exemplo.com"
+    username: "usuario"
+    password: "senha"
+    remote_dir: "/publico"
+    local_dir: "./downloads/exemplo"
+    recursive: true
+    exclude:
+      - "temp"
+      - "logs"
+    verbose: true   # Override do verbose global para este host
+    debug: false    # Override do debug global para este host
+
+  - name: "outro_servidor"
+    host: "ftp.outro.com"
+    username: "outro_usuario"
+    password: "outra_senha"
+    remote_dir: "/dados"
+    local_dir: "./downloads/outro"
+    recursive: true
+    exclude:
+      - "backup"
+      - "tmp"
+    verbose: false  # Usa configuração global
+    debug: true     # Usa configuração global
+
+# Explicação dos modos:
+# 
+# verbose: true
+#   - Adiciona --debug --verbose ao comando wget
+#   - Logs de saída em nível DEBUG (só aparecem se logging estiver em DEBUG)
+#   - Útil para debug técnico detalhado
+#
+# debug: true  
+#   - Sempre loga saída completa do wget em nível INFO
+#   - Independente do verbose
+#   - Útil para monitoramento em produção
+#
+# Ambos podem ser usados simultaneamente:
+# verbose: true + debug: true = máxima verbosidade

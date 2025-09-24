@@ -2,7 +2,11 @@
 """
 Script para espelhamento de diretórios usando wget via FTP.
 Lê configurações do arquivo config.yml e executa o espelhamento para cada host configurado.
-Suporta modo verbose para debugagem detalhada.
+
+Modos de operação:
+- verbose: Ativa logs detalhados do wget (--debug --verbose) e mostra saída em nível DEBUG
+- debug: Sempre loga a saída completa do wget em nível INFO, independente do verbose
+- Ambos podem ser usados simultaneamente para máxima verbosidade
 """
 
 import yaml
@@ -58,6 +62,7 @@ def mirror_directory(host_config):
     recursive = host_config.get('recursive', True)
     exclude = host_config.get('exclude', [])
     verbose = host_config.get('verbose', False)
+    debug = host_config.get('debug', False)
 
     # Cria o diretório local se não existir
     Path(local_dir).mkdir(parents=True, exist_ok=True)
@@ -83,6 +88,10 @@ def mirror_directory(host_config):
         logging.debug(f"Modo verbose ativado para {name}")
     else:
         wget_cmd.append('--no-verbose')
+    
+    # Adiciona modo debug se solicitado (independente do verbose)
+    if debug:
+        logging.info(f"Modo debug ativado para {name} - saída completa será logada")
 
     # Adiciona opções para exclusão de diretórios
     if exclude:
@@ -105,7 +114,7 @@ def mirror_directory(host_config):
         logging.info(f"Iniciando espelhamento FTP para {name}")
         logging.info(f"Conectando a: {safe_url}")  # Log seguro sem senha
         
-        if verbose:
+        if verbose or debug:
             logging.debug(f"Comando wget completo: {' '.join(wget_cmd).replace(password, '********')}")
         
         result = subprocess.run(
@@ -117,13 +126,22 @@ def mirror_directory(host_config):
 
         if result.returncode == 0:
             logging.info(f"Espelhamento concluído com sucesso para {name}")
-            if verbose:
+            if debug:
+                # Modo debug sempre mostra saída completa
+                logging.info(f"[DEBUG] Saída do wget para {name}:")
+                logging.info(f"[DEBUG] {result.stdout}")
+            elif verbose:
                 logging.debug(f"Saída do wget: {result.stdout}")
         else:
             # Filtra a saída de erro para remover possíveis senhas
             error_output = result.stderr.replace(password, '********')
             logging.error(f"Erro ao espelhar {name}: {error_output}")
-            if verbose:
+            if debug:
+                # Modo debug sempre mostra saída completa mesmo em caso de erro
+                logging.info(f"[DEBUG] Saída do wget (erro) para {name}:")
+                logging.info(f"[DEBUG] STDOUT: {result.stdout}")
+                logging.info(f"[DEBUG] STDERR: {result.stderr.replace(password, '********')}")
+            elif verbose:
                 logging.debug(f"Saída completa do wget: {result.stdout}")
 
     except subprocess.TimeoutExpired:
@@ -142,10 +160,13 @@ def main():
 
     # Configura o logging baseado no modo verbose global
     global_verbose = config.get('verbose', False)
-    setup_logging(global_verbose)
+    global_debug = config.get('debug', False)
+    setup_logging(global_verbose or global_debug)
     
     if global_verbose:
         logging.debug("Modo verbose global ativado")
+    if global_debug:
+        logging.info("[DEBUG] Modo debug global ativado - saídas completas serão logadas")
 
     for host in config.get('hosts', []):
         mirror_directory(host)
