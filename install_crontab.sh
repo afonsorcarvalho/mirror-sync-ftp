@@ -5,7 +5,9 @@
 # Configurações
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER_SCRIPT="$SCRIPT_DIR/run_mirror_sync.sh"
+CLEAN_LOGS_SCRIPT="$SCRIPT_DIR/clean_logs.sh"
 CRON_ENTRY_ID="#mirror_sync_fitadigital"
+CLEAN_LOGS_ENTRY_ID="#mirror_sync_clean_logs"
 
 # Função para log
 log_message() {
@@ -95,6 +97,22 @@ if [ ! -x "$WRAPPER_SCRIPT" ]; then
     fi
 fi
 
+# Verifica se o script clean_logs.sh existe
+if [ ! -f "$CLEAN_LOGS_SCRIPT" ]; then
+    log_message "ERRO: Script clean_logs.sh não encontrado: $CLEAN_LOGS_SCRIPT"
+    exit 1
+fi
+
+# Verifica se o script clean_logs.sh é executável
+if [ ! -x "$CLEAN_LOGS_SCRIPT" ]; then
+    log_message "Tornando clean_logs.sh executável..."
+    chmod +x "$CLEAN_LOGS_SCRIPT"
+    if [ $? -ne 0 ]; then
+        log_message "ERRO: Falha ao tornar clean_logs.sh executável"
+        exit 1
+    fi
+fi
+
 # Monta a entrada do crontab
 if [ $DAYS -gt 0 ]; then
     # Execução diária
@@ -115,13 +133,20 @@ else
     SCHEDULE_DESC="a cada $MINUTES minuto(s)"
 fi
 
-# Entrada completa do crontab
+# Entrada completa do crontab para mirror_sync
 CRON_ENTRY="$CRON_SCHEDULE $WRAPPER_SCRIPT $CRON_ENTRY_ID"
 
+# Entrada do crontab para clean_logs.sh (todo dia à meia-noite e meia)
+CLEAN_LOGS_SCHEDULE="30 0 * * *"
+CLEAN_LOGS_ENTRY="$CLEAN_LOGS_SCHEDULE $CLEAN_LOGS_SCRIPT $CLEAN_LOGS_ENTRY_ID"
+
 log_message "Configuração:"
-log_message "  - Script: $WRAPPER_SCRIPT"
-log_message "  - Agendamento: $SCHEDULE_DESC"
-log_message "  - Entrada crontab: $CRON_ENTRY"
+log_message "  - Script Mirror Sync: $WRAPPER_SCRIPT"
+log_message "  - Agendamento Mirror Sync: $SCHEDULE_DESC"
+log_message "  - Entrada crontab Mirror Sync: $CRON_ENTRY"
+log_message "  - Script Clean Logs: $CLEAN_LOGS_SCRIPT"
+log_message "  - Agendamento Clean Logs: todo dia à meia-noite e meia"
+log_message "  - Entrada crontab Clean Logs: $CLEAN_LOGS_ENTRY"
 
 # Verifica se já existe uma entrada no crontab
 log_message "Verificando se já existe entrada no crontab..."
@@ -130,12 +155,15 @@ log_message "Verificando se já existe entrada no crontab..."
 TEMP_CRON="/tmp/crontab_backup_$(date +%Y%m%d_%H%M%S)"
 crontab -l > "$TEMP_CRON" 2>/dev/null || touch "$TEMP_CRON"
 
-# Remove entrada existente se houver
+# Remove entradas existentes se houver
 grep -v "$CRON_ENTRY_ID" "$TEMP_CRON" > "$TEMP_CRON.new"
 mv "$TEMP_CRON.new" "$TEMP_CRON"
+grep -v "$CLEAN_LOGS_ENTRY_ID" "$TEMP_CRON" > "$TEMP_CRON.new"
+mv "$TEMP_CRON.new" "$TEMP_CRON"
 
-# Adiciona nova entrada
+# Adiciona novas entradas
 echo "$CRON_ENTRY" >> "$TEMP_CRON"
+echo "$CLEAN_LOGS_ENTRY" >> "$TEMP_CRON"
 
 # Aplica o novo crontab
 log_message "Aplicando nova configuração do crontab..."
@@ -144,11 +172,12 @@ crontab "$TEMP_CRON"
 if [ $? -eq 0 ]; then
     log_message "SUCESSO: Crontab configurado com sucesso!"
     log_message "O mirror_sync será executado $SCHEDULE_DESC"
+    log_message "O clean_logs será executado todo dia à meia-noite e meia"
     
     # Exibe o crontab atual
     log_message ""
     log_message "Crontab atual:"
-    crontab -l | grep -A5 -B5 "$CRON_ENTRY_ID" || crontab -l
+    crontab -l | grep -E "($CRON_ENTRY_ID|$CLEAN_LOGS_ENTRY_ID)" -A2 -B2 || crontab -l
     
 else
     log_message "ERRO: Falha ao aplicar configuração do crontab"

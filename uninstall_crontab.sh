@@ -5,13 +5,14 @@
 # Configurações
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRON_ENTRY_ID="#mirror_sync_fitadigital"
+CLEAN_LOGS_ENTRY_ID="#mirror_sync_clean_logs"
 
 # Função para log
 log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
-log_message "=== Desinstalação do Mirror Sync do Crontab ==="
+log_message "=== Desinstalação do Mirror Sync e Clean Logs do Crontab ==="
 
 # Verifica se existe um crontab
 if ! crontab -l >/dev/null 2>&1; then
@@ -19,19 +20,27 @@ if ! crontab -l >/dev/null 2>&1; then
     exit 0
 fi
 
-# Verifica se a entrada existe no crontab
-if ! crontab -l | grep -q "$CRON_ENTRY_ID"; then
-    log_message "INFO: Entrada do mirror_sync não encontrada no crontab"
+# Verifica se as entradas existem no crontab
+MIRROR_SYNC_EXISTS=$(crontab -l | grep -q "$CRON_ENTRY_ID" && echo "yes" || echo "no")
+CLEAN_LOGS_EXISTS=$(crontab -l | grep -q "$CLEAN_LOGS_ENTRY_ID" && echo "yes" || echo "no")
+
+if [ "$MIRROR_SYNC_EXISTS" = "no" ] && [ "$CLEAN_LOGS_EXISTS" = "no" ]; then
+    log_message "INFO: Nenhuma entrada do mirror_sync ou clean_logs encontrada no crontab"
     log_message "Nada a ser removido."
     exit 0
 fi
 
-log_message "Entrada encontrada no crontab:"
-crontab -l | grep "$CRON_ENTRY_ID"
+log_message "Entradas encontradas no crontab:"
+if [ "$MIRROR_SYNC_EXISTS" = "yes" ]; then
+    crontab -l | grep "$CRON_ENTRY_ID"
+fi
+if [ "$CLEAN_LOGS_EXISTS" = "yes" ]; then
+    crontab -l | grep "$CLEAN_LOGS_ENTRY_ID"
+fi
 
 # Confirma a remoção
 echo ""
-read -p "Deseja realmente remover a entrada do mirror_sync do crontab? (s/N): " -r
+read -p "Deseja realmente remover as entradas do mirror_sync e clean_logs do crontab? (s/N): " -r
 if [[ ! $REPLY =~ ^[Ss]$ ]]; then
     log_message "Operação cancelada pelo usuário"
     exit 0
@@ -42,16 +51,16 @@ BACKUP_FILE="/tmp/crontab_backup_$(date +%Y%m%d_%H%M%S)"
 crontab -l > "$BACKUP_FILE"
 log_message "Backup do crontab salvo em: $BACKUP_FILE"
 
-# Remove a entrada do crontab
+# Remove as entradas do crontab
 TEMP_CRON="/tmp/crontab_temp_$(date +%Y%m%d_%H%M%S)"
-crontab -l | grep -v "$CRON_ENTRY_ID" > "$TEMP_CRON"
+crontab -l | grep -v "$CRON_ENTRY_ID" | grep -v "$CLEAN_LOGS_ENTRY_ID" > "$TEMP_CRON"
 
 # Aplica o novo crontab
-log_message "Removendo entrada do crontab..."
+log_message "Removendo entradas do crontab..."
 crontab "$TEMP_CRON"
 
 if [ $? -eq 0 ]; then
-    log_message "SUCESSO: Entrada do mirror_sync removida do crontab!"
+    log_message "SUCESSO: Entradas do mirror_sync e clean_logs removidas do crontab!"
     
     # Exibe o crontab atual
     log_message ""
